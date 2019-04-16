@@ -64,7 +64,7 @@ func master() {
 	minPort := data.MinPort
 	maxPort := data.MaxPort
 
-	for ip := a.Mask(b.Mask); b.Contains(a); forIP(a) {
+	for a := a.Mask(b.Mask); b.Contains(a); forIP(a) {
 		for i := minPort; i < maxPort+1; i++ {
 			f := strconv.Itoa(i)
 
@@ -75,7 +75,7 @@ func master() {
 				break
 			}
 
-			go ck(ip.String(), f, sem, data, ch)
+			go ck(a.String(), f, sem, data, ch)
 
 		}
 	}
