@@ -73,7 +73,7 @@ ip 段式：
 
 使用 `-o` 可改变程序输出的文件名，例如
 
-`nps -o elissa.txt`
+`nps -o elissa.txt 8.8.8.8`
 
 既然说到了输出那就再说一下输出的文件内容如果 开头带 `http://` 则为 http 代理，如果是 `socks5://` 则为 socks5 代理
 
