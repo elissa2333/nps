@@ -2,13 +2,12 @@ package check
 
 import (
 	"net"
+	"strconv"
 	"time"
 )
 
-func TCPPort(ip, port string, in2 int) bool {
-	tou := time.Duration(in2)
-	address := ip + ":" + port
-	conn, err := net.DialTimeout("tcp", address, tou*time.Second)
+func TCPPort(host string, port uint16, timeout time.Duration) bool {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(int(port))), timeout)
 	if err != nil {
 		return false
 	} else {

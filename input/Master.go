@@ -10,13 +10,13 @@ import (
 )
 
 type Data struct {
-	Verbose    bool
-	OutputFile string
-	MaxTimeout int
-	Work       int
-	IP         string
-	MinPort    int
-	MaxPort    int
+	Verbose          bool
+	OutputFile       string
+	MaxTimeoutSecond int
+	Work             int
+	IP               string
+	MinPort          int
+	MaxPort          int
 }
 
 func Master() Data {
@@ -24,7 +24,7 @@ func Master() Data {
 
 	verbose := flag.Bool("v", false, "显示详细信息")
 	output := flag.String("o", "output.txt", "输出文件文件名")
-	maxTimeout := flag.Int("m", 10, "最大超时时间，单位为秒")
+	maxTimeoutSecond := flag.Int("m", 10, "最大超时时间，单位为秒")
 	ports := flag.String("p", "0-65535", "扫描端口范围")
 	work := flag.Int("w", 500, "每秒请求数,最多不能超过 1000000")
 
@@ -77,13 +77,13 @@ func Master() Data {
 	}
 
 	temp := Data{
-		Verbose:    *verbose,
-		OutputFile: *output,
-		MaxTimeout: *maxTimeout,
-		Work:       *work,
-		IP:         m,
-		MinPort:    minPort,
-		MaxPort:    maxPort,
+		Verbose:          *verbose,
+		OutputFile:       *output,
+		MaxTimeoutSecond: *maxTimeoutSecond,
+		Work:             *work,
+		IP:               m,
+		MinPort:          minPort,
+		MaxPort:          maxPort,
 	}
 	return temp
 

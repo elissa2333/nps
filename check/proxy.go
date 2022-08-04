@@ -1,26 +1,24 @@
 package check
 
 import (
-	"bytes"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
-func ProxyOfhttp(in string, in2 int) bool {
-
-	proxy := "http://" + in
+func IsProxy(proxy string, timeout time.Duration) bool {
 	proxyURL, err := url.Parse(proxy)
 	if err != nil {
-		log.Println("parse url error: ", err)
+		log.Println("parse proxy url error: ", err)
 		return false
 	}
 
 	client := &http.Client{
-		Timeout: time.Duration(in2) * time.Second,
+		Timeout: timeout,
 		Transport: &http.Transport{
 			Proxy: http.ProxyURL(proxyURL),
 		},
@@ -34,18 +32,12 @@ func ProxyOfhttp(in string, in2 int) bool {
 		return false
 	}
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 
 	res.Body.Close()
 
-	var foo []byte
+	ipS := strings.TrimSpace(string(body))
 
-	cache := bytes.Replace(body, []byte("\n"), foo, 1)
-
-	cache2 := net.ParseIP(string(cache))
-	if cache2 != nil {
-		return true
-	}
-
-	return false
+	ip := net.ParseIP(ipS)
+	return len(ip) != 0
 }

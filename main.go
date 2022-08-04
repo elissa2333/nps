@@ -17,22 +17,23 @@ import (
 )
 
 func main() {
-
-	master()
-}
-
-func master() {
 	data := input.Master()
-	coroutine := data.MaxTimeout * data.Work
-	ctx := context.TODO()
+
+	coroutine := data.MaxTimeoutSecond * data.Work
+	ctx := context.Background()
 	sem := semaphore.NewWeighted(int64(coroutine))
 
 	tiout := 1000000 / data.Work
 
 	ch := make(chan string, 1000)
-	rec := make(chan bool)
-	done := make(chan bool)
+
+	rec := make(chan struct{})
+	done := make(chan struct{})
 	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
+
 		f, err := os.Create(data.OutputFile)
 		if err != nil {
 			fmt.Println("写文件错误： ", err)
@@ -40,10 +41,12 @@ func master() {
 		defer f.Close()
 
 		sum := 0
+
+	loop:
 		for {
 			select {
 			case <-rec:
-				goto dones
+				break loop
 			case x := <-ch:
 				if sum == 0 {
 					f.WriteString(x)
@@ -53,10 +56,6 @@ func master() {
 				}
 			}
 		}
-
-	dones:
-		done <- true
-
 	}()
 
 	a, b, _ := net.ParseCIDR(data.IP)
@@ -66,8 +65,6 @@ func master() {
 
 	for a := a.Mask(b.Mask); b.Contains(a); forIP(a) {
 		for i := minPort; i < maxPort+1; i++ {
-			f := strconv.Itoa(i)
-
 			time.Sleep(time.Duration(tiout) * time.Microsecond) //时间除以进程数
 
 			if err := sem.Acquire(ctx, 1); err != nil {
@@ -75,7 +72,7 @@ func master() {
 				break
 			}
 
-			go ck(a.String(), f, sem, data, ch)
+			go work(a.String(), uint16(i), sem, data, ch)
 
 		}
 	}
@@ -84,51 +81,51 @@ func master() {
 		log.Printf("exit 无法获取信号量: %v\n", err)
 	}
 
-	time.Sleep(1 * time.Second)
-	rec <- true
+	rec <- struct{}{}
 
 	<-done
-
 }
 
-func ck(in, in2 string, sem *semaphore.Weighted, data input.Data, stream chan string) {
+func work(host string, port uint16, sem *semaphore.Weighted, data input.Data, stream chan<- string) {
 	defer sem.Release(1)
 
 	var wg sync.WaitGroup
 
-	if data.Verbose == true {
-		fmt.Printf("正在扫描%v:%v\n", in, in2)
+	if data.Verbose {
+		fmt.Printf("正在扫描%v:%d\n", host, port)
 	}
 
-	foo := check.TCPPort(in, in2, data.MaxTimeout)
-	if foo == true {
+	timeout := time.Duration(data.MaxTimeoutSecond) * time.Second
+	isOpen := check.TCPPort(host, port, timeout)
+
+	if isOpen {
 		wg.Add(2)
 
-		ber := in + ":" + in2
-		fmt.Printf("检测到 %v 端口开放，正在进行下一步检测\n", ber)
-		go func(kk string) {
+		address := net.JoinHostPort(host, strconv.Itoa(int(port)))
+		fmt.Printf("检测到 %v 端口开放，正在进行下一步检测\n", address)
+		go func() {
+			httpAddress := "http://" + address
 			defer wg.Done()
-			http := check.ProxyOfhttp(kk, data.MaxTimeout)
-			if http == true {
-				kk2 := "http://" + kk
-				stream <- kk2
+			isHttp := check.IsProxy(httpAddress, timeout)
+			if isHttp {
+				stream <- httpAddress
 
-				fmt.Printf("%v 为HTTP代理\n", kk)
+				fmt.Printf("%v 为HTTP代理\n", address)
 			}
-		}(ber)
+		}()
 
-		go func(kk string) {
+		go func() {
 			defer wg.Done()
-			socks := check.ProxyOfsocks5(kk, data.MaxTimeout)
-			if socks == true {
-				socks5 := "socks5://" + kk
-				stream <- socks5
-				fmt.Printf("%v 为socks5代理\n", kk)
+
+			socks5Address := "socks5://" + address
+			isSocks5 := check.IsProxy(socks5Address, timeout)
+			if isSocks5 {
+				stream <- socks5Address
+				fmt.Printf("%v 为socks5代理\n", address)
 			}
-		}(ber)
+		}()
 
 		wg.Wait()
-
 	}
 
 }

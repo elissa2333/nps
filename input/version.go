@@ -5,6 +5,6 @@ import (
 )
 
 func version() {
-	const number string = "Version: 0.0.0 beta"
+	const number string = "Version: 0.0.1"
 	fmt.Println(number)
 }
